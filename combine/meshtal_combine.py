@@ -671,7 +671,7 @@ def CmdLineFind( tag, defaultvalue ):
 def help():
     print 'meshtal_combine: A tool for combining MCNP meshtal files\n'
     print 'python meshtal_combine.py [OPTIONS] OPERATION INPUT1 INPUT2 ...\n'
-    print 'Operations: either --add or --avg'
+    print 'Operations: --add, --avg, --sub, --div (only add is supported for more than 2 meshtal files)'
     print 'OPTIONS'
     print '-o OUTFILE\tSet Output file name to OUTFILE (default COMBINEDMESH)'
     print '-s\t\tStreaming Mode, for very large files'
@@ -689,6 +689,7 @@ def main():
     add = CmdLineFindIndex('--add')
     sub = CmdLineFindIndex('--sub')
     avg = CmdLineFindIndex('--avg')
+    div = CmdLineFindIndex('--div')
     delete = CmdLineFindIndex('-d');
     showHelp = CmdLineFindIndex('-h')
     
@@ -711,8 +712,10 @@ def main():
         filesNdx+=1
     if avg > 0:
         filesNdx+=1
+    if div > 0:
+        filesNdx+=1
 
-    if add*avg*sub <= 0:
+    if add*avg*sub*div >= 0:
         print 'Error: Please choose a single operation.'
         help()
         sys.exit(1)
@@ -724,16 +727,11 @@ def main():
         
     meshfiles = sys.argv[filesNdx:]
         
-    if avg >=0  and len(meshfiles) > 2:
-        print 'Error: Averaging only supported for 2 files'
+    if (avg >=0 or sub >=0 or div >=0) and len(meshfiles) > 2:
+        print 'Error: This operation is only supported for 2 meshtals'
         help()
         sys.exit(1)
 
-    if sub >=0 and len(meshfiles) > 2:
-        print 'Error: Subtraction only supported for 2 files'
-        help()
-        sys.exit(1)
-    
     if streaming < 0:
         meshtal = Meshtal()
         meshtal.read(meshfiles[0])
@@ -742,15 +740,17 @@ def main():
             meshtal2.read(meshfiles[ndx])
             if add:
                 meshtal.Add(meshtal2)
-            if sub:
+            elif sub:
                 meshtal.Sub(meshtal2)
             elif avg:
                 meshtal.Avg(meshtal2)
+            elif div:
+                meshtal.Div(meshtal2)
         meshtal.Write(outname)
     else:
         outnames = []
         operation = ""
-        assert(add*sub*avg >= 0)
+        assert(add*sub*avg*div <= 0)
         if add >=0: operation = "add"
         if sub >=0: operation = "sub"
         if avg >=0: operation = "avg"
